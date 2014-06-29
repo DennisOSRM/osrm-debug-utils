@@ -1,0 +1,134 @@
+<html>
+<head>
+<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+
+<script src="input.json"></script>
+
+<style>
+#map { height: 100%; width: 100%}
+.info {
+padding: 6px 8px;
+font: 14px/16px Arial, Helvetica, sans-serif;
+background: white;
+background: rgba(255,255,255,0.8);
+box-shadow: 0 0 15px rgba(0,0,0,0.2);
+border-radius: 5px;
+}
+
+.info h4 {
+margin: 0 0 5px;
+color: #777;
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var map = L.map('map').setView([52.515273, 13.402796], 11);
+L.tileLayer('http://{s}.tiles.mapbox.com/v3/themarex.iknk0okn/{z}/{x}/{y}.png', {
+attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+		maxZoom: 18
+		}).addTo(map);
+
+//L.geoJson(geojson).addTo(map);
+
+var displayBB = new Set();
+displayBB.add(0);
+
+function colorizeBB(feature)
+{
+  if (feature.properties.is_leaf == true)
+  {
+      return {color: "#ff0000", weight: 1.0, fillOpacity: 0.1};
+  } else if (feature.properties.is_leaf == false)
+  {
+      return {color: "#0000bb", weight: 3.0, fillOpacity: 0.1};
+  }
+}
+
+var layers = [];
+
+function updateLayers()
+{
+      for (var j = 0; j < layers.length; j++)
+      {
+          var layer = layers[j];
+          var display = displayBB.has(layer.feature.properties.id);
+
+          if (display)
+          {
+              layer.setStyle({
+                  fillOpacity: 0.1,
+                  opacity: 0.1,
+                  clickable: true
+              });
+              layer.bringToFront();
+          }
+          else
+          {
+              layer.setStyle({
+                  fillOpacity: 0.0,
+                  opacity: 0.0,
+                  clickable: false
+              });
+              layer.bringToBack();
+          }
+      }
+}
+
+var info = L.control();
+
+function onEachFeature(feature, layer) {
+  layers.push(layer);
+  layer.on({
+    click: function(e) {
+        var layer = e.target;
+        if (layer.feature.properties && layer.feature.properties.children)
+        {
+            for (var i = 0; i < layer.feature.properties.children.length; i++)
+            {
+              displayBB.add(layer.feature.properties.children[i]);
+            }
+        }
+        if (!layer.feature.properties.is_leaf)
+          displayBB.delete(layer.feature.properties.id);
+        updateLayers();
+    },
+    mouseover: function(e) {
+        var layer = e.target;
+        layer.setStyle({weight: 5});
+
+        info.update(layer.feature.properties);
+    },
+    mouseout: function(e) {
+        var layer = e.target;
+        layer.setStyle({weight: 1});
+    }
+  });
+}
+
+info.onAdd = function (map) {
+  this._div = L.DomUtil.create('div', 'info');
+  this.update();
+  return this._div;
+};
+
+info.update = function (props) {
+  this._div.innerHTML = '<h4>Tree node</h4>' +  (props ?
+      '<b>' + props.id + '</b>' + (props.children.length > 0 ? '<br /> Children: ' + props.children : '')
+      : 'Hover over a rectangle');
+};
+
+info.addTo(map);
+
+var geojsonLayer = L.geoJson(geojson, {
+style: colorizeBB,
+onEachFeature: onEachFeature,
+}).addTo(map);
+
+updateLayers();
+
+</script>
+</body>
+</html>
