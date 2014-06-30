@@ -35,6 +35,7 @@ attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</
 
 var displayBB = new Set();
 displayBB.add(0);
+var displayData = new Set();
 
 function colorizeBB(feature)
 {
@@ -45,15 +46,17 @@ function colorizeBB(feature)
   {
       return {color: "#0000bb", weight: 3.0, fillOpacity: 0.1};
   }
+  return {color: "#000000", weight: 5.0, opacity: 0.8};
 }
 
-var layers = [];
+var bbLayers = [];
+var dataLayers = [];
 
-function updateLayers()
+function updateBBs()
 {
-      for (var j = 0; j < layers.length; j++)
+      for (var j = 0; j < bbLayers.length; j++)
       {
-          var layer = layers[j];
+          var layer = bbLayers[j];
           var display = displayBB.has(layer.feature.properties.id);
 
           if (display)
@@ -77,33 +80,75 @@ function updateLayers()
       }
 }
 
+function updateData()
+{
+      for (var j = 0; j < dataLayers.length; j++)
+      {
+          var layer = dataLayers[j];
+          var display = displayData.has(layer.feature.properties.leaf_id);
+
+          if (display)
+          {
+              layer.setStyle({
+                  fillOpacity: 1.0,
+                  opacity: 1.0,
+                  clickable: false
+              });
+              layer.bringToFront();
+          }
+          else
+          {
+              layer.setStyle({
+                  fillOpacity: 0.0,
+                  opacity: 0.0,
+                  clickable: false
+              });
+              layer.bringToBack();
+          }
+      }
+}
+
 var info = L.control();
 
 function onEachFeature(feature, layer) {
-  layers.push(layer);
+  if (layer.feature.properties.is_data)
+    dataLayers.push(layer);
+  else
+    bbLayers.push(layer);
+
   layer.on({
     click: function(e) {
         var layer = e.target;
-        if (layer.feature.properties && layer.feature.properties.children)
+        if (layer.feature.properties && !layer.feature.properties.is_leaf)
         {
             for (var i = 0; i < layer.feature.properties.children.length; i++)
             {
               displayBB.add(layer.feature.properties.children[i]);
             }
         }
-        if (!layer.feature.properties.is_leaf)
-          displayBB.delete(layer.feature.properties.id);
-        updateLayers();
+        if (layer.feature.properties.is_leaf)
+        {
+           displayData.add(layer.feature.properties.children[0]);
+        }
+        else if (!layer.feature.properties.is_data)
+        {
+           displayBB.delete(layer.feature.properties.id);
+        }
+        updateBBs();
+        updateData();
     },
     mouseover: function(e) {
         var layer = e.target;
-        layer.setStyle({weight: 5});
+        if (layer.feature.properties.is_data)
+          layer.setStyle({weight: 8});
+        else
+          layer.setStyle({weight: 5});
 
         info.update(layer.feature.properties);
     },
     mouseout: function(e) {
         var layer = e.target;
-        layer.setStyle({weight: 1});
+        geojsonLayer.resetStyle(layer);
     }
   });
 }
@@ -115,9 +160,16 @@ info.onAdd = function (map) {
 };
 
 info.update = function (props) {
-  this._div.innerHTML = '<h4>Tree node</h4>' +  (props ?
-      '<b>' + props.id + '</b>' + (props.children.length > 0 ? '<br /> Children: ' + props.children : '')
-      : 'Hover over a rectangle');
+  if (props && props.is_data)
+  {
+    this._div.innerHTML = '<h4>Data</h4>' + "<b>(" + props.edge[0] + "," + props.edge[1] + ')</b><br/>' + 'Leaf id: ' + props.leaf_id;
+  }
+  else
+  {
+    this._div.innerHTML = '<h4>Tree node</h4>' +  (props ?
+        '<b>' + props.id + '</b>' + (props.children.length > 0 ? '<br /> Children: ' + props.children : '')
+        : 'Hover over a rectangle');
+  }
 };
 
 info.addTo(map);
@@ -127,7 +179,8 @@ style: colorizeBB,
 onEachFeature: onEachFeature,
 }).addTo(map);
 
-updateLayers();
+updateBBs();
+updateData();
 
 </script>
 </body>

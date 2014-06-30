@@ -68,6 +68,8 @@ def readBoundingBoxes(data):
         num_children = t[4]
         is_leaf_bb = (num_children & 0x80000000) != 0
         num_children = num_children & 0x7FFFFFFF
+        if is_leaf_bb:
+            num_children += 1
         children = t[5:5+num_children]
         min_lon, max_lon, min_lat, max_lat = [c / COORDINATE_PRECISION for c in t[:4]]
         bb = [[min_lon, min_lat], [max_lon, min_lat], [max_lon, max_lat], [min_lon, max_lat]]
@@ -79,13 +81,13 @@ def toGeoJSON(leaves, nodes, bbs):
     j = {'type': "FeatureCollection"}
     features = []
     for i, l in enumerate(leaves):
-        for u, v in random.sample(l, NUM_SAMPLES):
+        for u, v in random.sample(l, min(NUM_SAMPLES, len(l))):
             f = {'type': "Feature",
                  'geometry': {
                  'type': "LineString",
                  'coordinates': [nodes[u], nodes[v]]
                  },
-                'properties': {'leaf_id': i},
+                'properties': {'leaf_id': i, 'is_data': True, 'edge': [u, v]},
                }
             features.append(f)
     for bb in bbs:
