@@ -10,3 +10,11 @@ Requires Python 3.
 
 Open main.html to display the data.
 
+## FileGuard
+
+*WARNING* This runs osrm-datastore which might interfere with running OSRM instances!
+
+Runs all osrm tools and checks all files that are touched against a whitelist.
+
+This guards against debugging files that could blow up the production servers.
+
