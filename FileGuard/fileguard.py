@@ -58,6 +58,8 @@ WHITELIST = [
 "^/usr/lib/locale/.*",
 "^/usr/lib/gconv/gconv-modules.cache",
 "^/usr/lib/gconv/gconv-modules",
+"^/usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache",
+"^/usr/lib/x86_64-linux-gnu/gconv/gconv-modules",
 "^/var/tmp/stxxl"
 ]
 
